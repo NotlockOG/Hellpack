@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HELLPACK — DOOM WAD/PK3 → HTML Packer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Teko:wght@300;400;500;600;700&family=Exo+2:ital,wght@0,100;0,400;0,700;1,400&display=swap');
+
+  :root {
+    --red: #c0392b;
+    --red-hot: #ff2200;
+    --red-glow: #ff4422;
+    --orange: #e67e22;
+    --dark: #0a0a0a;
+    --dark2: #111111;
+    --dark3: #1a1a1a;
+    --panel: #141414;
+    --border: #2a2a2a;
+    --text: #cccccc;
+    --text-dim: #666666;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Teko', sans-serif;
+    --body: 'Exo 2', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  header {
+    position: relative;
+    padding: 48px 0 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(192,57,43,0.18) 0%, transparent 70%);
+  }
+
+  .logo-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    animation: flicker 8s infinite;
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: clamp(60px, 10vw, 120px);
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: 0.04em;
+    background: linear-gradient(180deg, #ffffff 0%, #ff6644 40%, #c0392b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 40px rgba(192,57,43,0.6));
+    position: relative;
+    animation: glitch 12s infinite;
+  }
+
+  .logo-sub {
+    font-family: var(--display);
+    font-size: clamp(18px, 3vw, 28px);
+    font-weight: 300;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .logo-sub em { color: var(--orange); font-style: normal; }
+
+  .tag-line {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .tag-line span { color: var(--red); }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .steps {
+    padding: 48px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 28px 32px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .step:hover { border-left-color: var(--red-hot); }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .step h2 {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+
+  .step p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .step p:last-child { margin-bottom: 0; }
+
+  .step p code {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--orange);
+    background: rgba(230,126,34,0.08);
+    padding: 1px 5px;
+  }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    background: rgba(255,255,255,0.02);
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--red);
+    background: rgba(192,57,43,0.06);
+  }
+
+  .dropzone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .dropzone-icon { font-size: 40px; margin-bottom: 12px; }
+
+  .dropzone-label {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .dropzone-hint {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  #file-list {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .file-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 2px 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .badge-iwad  { background: #8e44ad; color: #fff; }
+  .badge-pwad  { background: var(--red); color: #fff; }
+  .badge-pk3   { background: var(--orange); color: #fff; }
+  .badge-deh   { background: #27ae60; color: #fff; }
+  .badge-demo  { background: #2980b9; color: #fff; }
+  .badge-cfg   { background: #555; color: #fff; }
+  .badge-other { background: #333; color: #aaa; }
+
+  .file-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-size {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .file-role select {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 6px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .file-role select:focus { border-color: var(--red); }
+
+  .file-remove {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+
+  .file-remove:hover { color: var(--red-hot); }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 600px) { .options-grid { grid-template-columns: 1fr; } }
+
+  .opt-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .opt-group label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .opt-group input[type=text],
+  .opt-group select {
+    background: var(--dark3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+
+  .opt-group input:focus,
+  .opt-group select:focus { border-color: var(--red); }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .checkbox-row input[type=checkbox] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border: 1px solid var(--border);
+    background: var(--dark3);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .checkbox-row input[type=checkbox]:checked {
+    background: var(--red);
+    border-color: var(--red);
+  }
+
+  .checkbox-row input[type=checkbox]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: -2px; left: 1px;
+    font-size: 13px;
+    color: #fff;
+    font-weight: bold;
+  }
+
+  .checkbox-row span {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .pack-btn {
+    display: block;
+    width: 100%;
+    padding: 18px 32px;
+    background: var(--red);
+    border: none;
+    color: #fff;
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.15s;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+
+  .pack-btn:hover { background: var(--red-hot); }
+  .pack-btn:active { background: #a93226; }
+
+  .pack-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+
+  .pack-btn:hover::before { transform: translateX(100%); }
+
+  .pack-btn:disabled { background: #333; color: #555; cursor: not-allowed; }
+  .pack-btn:disabled::before { display: none; }
+
+  #progress-section { display: none; }
+  #progress-section.active { display: block; }
+
+  .progress-log {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #88ff66;
+    height: 160px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+
+  .progress-log .err  { color: var(--red-hot); }
+  .progress-log .warn { color: var(--orange); }
+  .progress-log .dim  { color: var(--text-dim); }
+
+  .progress-bar-wrap { height: 4px; background: var(--border); margin-top: 8px; overflow: hidden; }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red), var(--orange));
+    width: 0%;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px var(--red-glow);
+  }
+
+  #output-section { display: none; }
+  #output-section.active { display: block; animation: fadeIn 0.4s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .download-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 20px 32px;
+    background: linear-gradient(135deg, #1a3a1a, #0d2a0d);
+    border: 1px solid #27ae60;
+    color: #2ecc71;
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+
+  .download-btn:hover { background: linear-gradient(135deg, #1e4a1e, #122e12); box-shadow: 0 0 24px rgba(46,204,113,0.3); }
+
+  .output-info {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  .notice-box {
+    background: rgba(230,126,34,0.08);
+    border: 1px solid rgba(230,126,34,0.3);
+    border-left: 3px solid var(--orange);
+    padding: 14px 18px;
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--orange);
+    line-height: 1.8;
+  }
+
+  .how-section {
+    border-top: 1px solid var(--border);
+    padding: 48px 0;
+  }
+
+  .how-section h3 {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #fff;
+    margin-bottom: 24px;
+  }
+
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .how-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+
+  .how-card-icon { font-size: 28px; margin-bottom: 10px; }
+
+  .how-card h4 {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--red);
+    margin-bottom: 6px;
+  }
+
+  .how-card p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  @keyframes flicker {
+    0%,95%,100% { opacity: 1; }
+    96% { opacity: 0.3; }
+    97% { opacity: 1; }
+    98% { opacity: 0.5; }
+    99% { opacity: 1; }
+  }
+
+  @keyframes glitch {
+    0%,90%,100% { transform: none; filter: none; }
+    91% { transform: translate(-2px,0); filter: hue-rotate(90deg); }
+    92% { transform: translate(2px,0); filter: hue-rotate(-90deg); }
+    93% { transform: none; filter: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo-eyebrow">// DOOM ENGINE PACKER v1.0 //</div>
+    <div class="logo">HELLPACK</div>
+    <div class="logo-sub">WAD &amp; PK3 → <em>Portable HTML</em></div>
+    <div class="tag-line">pack once · <span>play anywhere</span> · no server required</div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="steps">
+
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="step-num">// Step 01</div>
+      <h2>Load Your Game Files</h2>
+      <p>Drop your WAD, PK3, IWAD, DEH, or CFG files below. You <strong style="color:#fff">need at least one IWAD</strong> (e.g. <code>doom.wad</code>, <code>doom2.wad</code>, <code>heretic.wad</code>, <code>freedoom1.wad</code>) to play. PWADs and PK3s are optional add-ons.</p>
+      <p style="color:var(--orange)">⚠ Files are processed entirely in your browser — nothing is uploaded to any server.</p>
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" multiple accept=".wad,.WAD,.pk3,.PK3,.pk7,.PK7,.ipk3,.ipk7,.iwad,.IWAD,.deh,.DEH,.bex,.BEX,.lmp,.LMP,.cfg,.CFG">
+        <div class="dropzone-icon">🔥</div>
+        <div class="dropzone-label">Drop files here or click to browse</div>
+        <div class="dropzone-hint">.WAD · .PK3 · .PK7 · .IWAD · .DEH · .CFG · .LMP</div>
+      </div>
+
+      <div id="file-list"></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="step-num">// Step 02</div>
+      <h2>Configure Options</h2>
+      <p>Customize how your packed game launches.</p>
+
+      <div class="options-grid">
+        <div class="opt-group">
+          <label>Game Title</label>
+          <input type="text" id="opt-title" placeholder="e.g. My Doom Megawad" value="DOOM">
+        </div>
+        <div class="opt-group">
+          <label>Skill Level</label>
+          <select id="opt-skill">
+            <option value="1">1 – I'm Too Young to Die</option>
+            <option value="2" selected>2 – Hey, Not Too Rough</option>
+            <option value="3">3 – Hurt Me Plenty</option>
+            <option value="4">4 – Ultra-Violence</option>
+            <option value="5">5 – Nightmare!</option>
+          </select>
+        </div>
+        <div class="opt-group">
+          <label>Starting Map (optional)</label>
+          <input type="text" id="opt-map" placeholder="e.g. E1M1 or MAP01">
+        </div>
+        <div class="opt-group">
+          <label>Extra Command-Line Args</label>
+          <input type="text" id="opt-args" placeholder="-fast -nomonsters etc.">
+        </div>
+        <div class="opt-group" style="grid-column:1/-1; display:flex; flex-direction:column; gap:10px;">
+          <label class="checkbox-row">
+            <input type="checkbox" id="opt-fullscreen" checked>
+            <span>Auto-request fullscreen on launch</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="opt-autostart" checked>
+            <span>Auto-start game when HTML opens (skip splash screen)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="step-num">// Step 03</div>
+      <h2>Pack &amp; Download</h2>
+      <p>Generates a single self-contained HTML file. The output uses the <strong style="color:#fff">doom-wasm</strong> engine — a WebAssembly build of Chocolate Doom extended with PK3/ZIP virtual filesystem support. Open the HTML in any modern browser to play.</p>
+
+      <div class="notice-box">
+        ⚡ The generated HTML loads the Doom WASM engine from jsDelivr CDN on first open. After the first load it can work fully offline (the browser caches the engine). For a truly offline bundle, use the <strong>Self-Contained</strong> mode (embeds the engine ~3MB extra).
+      </div>
+
+      <br>
+
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px;">
+        <label class="checkbox-row">
+          <input type="checkbox" id="opt-selfcontained">
+          <span style="color:var(--orange);">Self-Contained (embed engine, +~3MB)</span>
+        </label>
+      </div>
+
+      <button class="pack-btn" id="pack-btn" onclick="packGame()">⚡ PACK TO HTML</button>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="step" id="progress-section">
+      <div class="step-num">// Packing...</div>
+      <h2>Building Your Game</h2>
+      <div class="progress-log" id="progress-log"></div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="step" id="output-section">
+      <div class="step-num">// Done ✓</div>
+      <h2>Your Game is Ready</h2>
+      <a class="download-btn" id="download-link" href="#" download="doom-game.html">⬇ DOWNLOAD HTML GAME</a>
+      <div class="output-info" id="output-info"></div>
+    </div>
+
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-section">
+    <h3>How It Works</h3>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-card-icon">📦</div>
+        <h4>Base64 Embed</h4>
+        <p>All WAD, PK3, DEH, and config files are base64-encoded and embedded directly into the HTML as JS data arrays.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-card-icon">💾</div>
+        <h4>Virtual FS</h4>
+        <p>Emscripten's virtual filesystem is pre-populated with all files at runtime. PK3 ZIPs are extracted into a virtual directory tree.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-card-icon">🎮</div>
+        <h4>WASM Engine</h4>
+        <p>Chocolate Doom compiled to WebAssembly handles all rendering and game logic — no plugins, no install.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-card-icon">🌐</div>
+        <h4>Offline Play</h4>
+        <p>Open the HTML in Chrome, Firefox, or Edge. No internet required after the engine is cached by your browser.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    HELLPACK · doom-wasm engine · all processing in-browser · <span style="color:var(--red)">rip &amp; tear</span>
+  </div>
+</footer>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════
+//  FILE MANAGEMENT
+// ═══════════════════════════════════════
+
+const files = [];
+
+const dropzone  = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const fileList  = document.getElementById('file-list');
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  addFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value = ''; });
+
+const IWAD_NAMES = new Set([
+  'doom','doom1','doom2','tnt','plutonia','heretic','hexen','strife',
+  'chex','chex3','hacx','freedoom1','freedoom2','freedm','harm1',
+  'rekkr','action2','blake','voices'
+]);
+
+function guessRole(name) {
+  const ext  = name.split('.').pop().toLowerCase();
+  const base = name.replace(/\.[^.]+$/, '').toLowerCase();
+  if (ext === 'iwad') return 'iwad';
+  if (ext === 'wad')  return IWAD_NAMES.has(base) ? 'iwad' : 'pwad';
+  if (['pk3','pk7','ipk3','ipk7'].includes(ext)) return 'pk3';
+  if (['deh','bex'].includes(ext)) return 'deh';
+  if (ext === 'lmp') return 'demo';
+  if (ext === 'cfg') return 'cfg';
+  return 'other';
+}
+
+function fmtSize(n) {
+  if (n < 1024)    return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(2) + ' MB';
+}
+
+function addFiles(newFiles) {
+  newFiles.forEach(f => {
+    if (!files.find(x => x.file.name === f.name))
+      files.push({ file: f, role: guessRole(f.name) });
+  });
+  renderFileList();
+}
+
+function removeFile(idx) { files.splice(idx, 1); renderFileList(); }
+
+function renderFileList() {
+  fileList.innerHTML = '';
+  files.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML =
+      `<span class="file-badge badge-${item.role}">${item.role.toUpperCase()}</span>` +
+      `<span class="file-name" title="${item.file.name}">${item.file.name}</span>` +
+      `<span class="file-size">${fmtSize(item.file.size)}</span>` +
+      `<span class="file-role"><select data-idx="${idx}">` +
+        ['iwad','pwad','pk3','deh','demo','cfg','other']
+          .map(r => `<option value="${r}"${r===item.role?' selected':''}>${r.toUpperCase()}</option>`)
+          .join('') +
+      `</select></span>` +
+      `<button class="file-remove" data-idx="${idx}" title="Remove">✕</button>`;
+    fileList.appendChild(div);
+  });
+
+  fileList.querySelectorAll('select[data-idx]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      files[+sel.dataset.idx].role = sel.value;
+      renderFileList();
+    });
+  });
+
+  fileList.querySelectorAll('.file-remove').forEach(btn => {
+    btn.addEventListener('click', () => removeFile(+btn.dataset.idx));
+  });
+}
+
+// ═══════════════════════════════════════
+//  PACKER
+// ═══════════════════════════════════════
+
+function log(msg, cls) {
+  const el   = document.getElementById('progress-log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = '> ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function readAsBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function packGame() {
+  if (files.length === 0) { alert('Add at least one WAD or PK3 file first!'); return; }
+
+  const hasIWAD = files.some(f => f.role === 'iwad');
+  if (!hasIWAD) {
+    if (!confirm('No IWAD detected (doom.wad, doom2.wad, etc). The game may not boot without one.\n\nContinue anyway?')) return;
+  }
+
+  document.getElementById('progress-section').classList.add('active');
+  document.getElementById('output-section').classList.remove('active');
+  document.getElementById('pack-btn').disabled = true;
+  document.getElementById('progress-log').innerHTML = '';
+
+  const title       = document.getElementById('opt-title').value.trim() || 'DOOM';
+  const skill       = document.getElementById('opt-skill').value;
+  const map         = document.getElementById('opt-map').value.trim();
+  const extraArgs   = document.getElementById('opt-args').value.trim();
+  const fullscreen  = document.getElementById('opt-fullscreen').checked;
+  const autostart   = document.getElementById('opt-autostart').checked;
+
+  log(`Packing "${title}" — ${files.length} file(s)`);
+  setProgress(5);
+
+  const fileData = [];
+  for (let i = 0; i < files.length; i++) {
+    const item = files[i];
+    log(`Reading ${item.file.name} (${fmtSize(item.file.size)})...`);
+    try {
+      const b64 = await readAsBase64(item.file);
+      fileData.push({ name: item.file.name, role: item.role, b64, size: item.file.size });
+    } catch(e) {
+      log(`ERROR: ${item.file.name} — ${e.message}`, 'err');
+    }
+    setProgress(5 + Math.floor(70 * (i+1) / files.length));
+  }
+
+  log('Assembling command-line arguments...');
+  setProgress(80);
+
+  // Build args
+  const args = [];
+  const iwadFile = fileData.find(f => f.role === 'iwad');
+  if (iwadFile) args.push('-iwad', iwadFile.name);
+
+  const pwads = fileData.filter(f => f.role === 'pwad');
+  const pk3s  = fileData.filter(f => f.role === 'pk3');
+  const extra = [...pwads, ...pk3s];
+  if (extra.length) args.push('-file', ...extra.map(f => f.name));
+
+  const dehs = fileData.filter(f => f.role === 'deh');
+  if (dehs.length) args.push('-deh', ...dehs.map(f => f.name));
+
+  args.push('-skill', skill);
+
+  if (map) {
+    const upper = map.toUpperCase();
+    if (/^E\dM\d$/.test(upper)) {
+      args.push('-warp', upper[1], upper[3]);
+    } else if (/^MAP\d+$/i.test(upper)) {
+      args.push('-warp', String(parseInt(map.replace(/^MAP/i,''))));
+    } else {
+      args.push('-warp', map);
+    }
+  }
+
+  const demos = fileData.filter(f => f.role === 'demo');
+  if (demos.length) args.push('-playdemo', demos[0].name);
+
+  if (extraArgs) {
+    const parts = extraArgs.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+    args.push(...parts.map(a => a.replace(/^"|"$/g, '')));
+  }
+
+  log('Generating HTML...');
+  setProgress(90);
+
+  const html = buildOutputHTML({ title, fileData, args, fullscreen, autostart });
+
+  setProgress(98);
+
+  const totalBytes = fileData.reduce((s,f) => s + f.size, 0);
+  log(`Done! HTML size: ${fmtSize(html.length)} | Game data: ${fmtSize(totalBytes)}`);
+  log('Ready to download!', 'warn');
+  setProgress(100);
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const dlLink = document.getElementById('download-link');
+  const safeName = title.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'doom_game';
+  dlLink.href     = url;
+  dlLink.download = safeName + '.html';
+
+  document.getElementById('output-info').innerHTML =
+    `<strong style="color:#fff">${safeName}.html</strong> &nbsp;·&nbsp; ` +
+    `${fmtSize(html.length)} &nbsp;·&nbsp; ${files.length} file(s) embedded`;
+
+  document.getElementById('output-section').classList.add('active');
+  document.getElementById('pack-btn').disabled = false;
+}
+
+// ═══════════════════════════════════════
+//  HTML GENERATOR
+// ═══════════════════════════════════════
+
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildOutputHTML({ title, fileData, args, fullscreen, autostart }) {
+  // Build the embedded files array as a JS string
+  // We chunk base64 to avoid huge single-line strings
+  const filesJS = fileData.map(f => {
+    return `{name:${JSON.stringify(f.name)},role:${JSON.stringify(f.role)},b64:${JSON.stringify(f.b64)}}`;
+  }).join(',\n');
+
+  const argsJS       = JSON.stringify(args);
+  const fullscreenJS = fullscreen ? 'true' : 'false';
+  const autostartJS  = autostart  ? 'true' : 'false';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(title)}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Courier New',monospace}
+#ui{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;background:#000;z-index:100;
+}
+h1{
+  font-size:clamp(28px,8vw,72px);letter-spacing:.12em;margin-bottom:8px;
+  color:#c0392b;text-shadow:0 0 40px rgba(192,57,43,0.8),0 0 80px rgba(192,57,43,0.4);
+}
+.sub{font-size:12px;color:#444;letter-spacing:.3em;margin-bottom:48px}
+#start-btn{
+  padding:14px 48px;background:#c0392b;border:none;color:#fff;
+  font-size:18px;font-family:'Courier New',monospace;letter-spacing:.2em;
+  cursor:pointer;transition:background .15s;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+#start-btn:hover{background:#e74c3c}
+#loading{display:none;flex-direction:column;align-items:center;gap:12px;min-width:320px}
+#loading.show{display:flex}
+#splash.hidden{display:none}
+.pbar{width:320px;height:3px;background:#1a1a1a}
+.pfill{height:100%;background:linear-gradient(90deg,#c0392b,#e67e22);width:0%;transition:width .3s}
+.logline{font-size:11px;color:#555;letter-spacing:.08em}
+#cvwrap{width:100%;height:100%;display:none;align-items:center;justify-content:center}
+#cvwrap.show{display:flex}
+canvas{display:block;image-rendering:pixelated;max-width:100vw;max-height:100vh}
+#errmsg{display:none;color:#ff4422;text-align:center;padding:24px;max-width:560px;line-height:1.8;font-size:13px}
+#errmsg.show{display:block}
+.hint{position:fixed;bottom:12px;right:16px;font-size:10px;color:#222;letter-spacing:.1em;z-index:200;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="splash">
+    <h1>${esc(title)}</h1>
+    <div class="sub">DOOM ENGINE &bull; BROWSER EDITION</div>
+    <button id="start-btn" onclick="startGame()">&#9654; LAUNCH GAME</button>
+  </div>
+  <div id="loading">
+    <div class="logline" id="logline">Initializing...</div>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+  </div>
+  <div id="errmsg"></div>
+</div>
+
+<div id="cvwrap">
+  <canvas id="canvas"></canvas>
+</div>
+
+<div class="hint">F &mdash; Fullscreen</div>
+
+<script>
+(function(){
+'use strict';
+
+// ── Embedded game files ──────────────────────────────────────
+const GAME_FILES=[
+${filesJS}
+];
+const DOOM_ARGS=${argsJS};
+const AUTO_FULLSCREEN=${fullscreenJS};
+
+// ── Utilities ─────────────────────────────────────────────────
+function b64ToU8(b64){
+  var bin=atob(b64),u=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  return u;
+}
+function setLog(m){document.getElementById('logline').textContent=m;}
+function setProg(p){document.getElementById('pfill').style.width=p+'%';}
+function showError(m){
+  var e=document.getElementById('errmsg');
+  e.innerHTML='<strong>&#9888; Error</strong><br><br>'+m;
+  e.classList.add('show');
+  document.getElementById('loading').classList.remove('show');
+}
+
+// ── Minimal ZIP/PK3 extractor ─────────────────────────────────
+function parseZip(data){
+  var view=new DataView(data.buffer,data.byteOffset,data.byteLength);
+  var eocd=-1;
+  for(var i=data.length-22;i>=0;i--){
+    if(data[i]===0x50&&data[i+1]===0x4b&&data[i+2]===0x05&&data[i+3]===0x06){eocd=i;break;}
+  }
+  if(eocd<0)throw new Error('Not a valid PK3/ZIP');
+  var cdOff=view.getUint32(eocd+16,true);
+  var cdCnt=view.getUint16(eocd+8,true);
+  var entries=[],pos=cdOff;
+  for(var i=0;i<cdCnt;i++){
+    if(view.getUint32(pos,true)!==0x02014b50)break;
+    var cmp=view.getUint16(pos+10,true);
+    var csz=view.getUint32(pos+20,true);
+    var usz=view.getUint32(pos+24,true);
+    var fnl=view.getUint16(pos+28,true);
+    var exl=view.getUint16(pos+30,true);
+    var cml=view.getUint16(pos+32,true);
+    var lof=view.getUint32(pos+42,true);
+    var fname=new TextDecoder().decode(data.slice(pos+46,pos+46+fnl));
+    entries.push({name:fname,cmp:cmp,csz:csz,usz:usz,lof:lof});
+    pos+=46+fnl+exl+cml;
+  }
+  var out={};
+  for(var e of entries){
+    if(e.name.endsWith('/'))continue;
+    var lp=e.lof;
+    if(view.getUint32(lp,true)!==0x04034b50)continue;
+    var lfn=view.getUint16(lp+26,true);
+    var lex=view.getUint16(lp+28,true);
+    var ds=lp+30+lfn+lex;
+    var comp=data.slice(ds,ds+e.csz);
+    if(e.cmp===0)out[e.name]=comp;
+    else if(e.cmp===8)out[e.name]={comp:comp,usz:e.usz};
+  }
+  return out;
+}
+
+async function decompress(comp){
+  var ds=new DecompressionStream('deflate-raw');
+  var w=ds.writable.getWriter();
+  w.write(comp);w.close();
+  var r=ds.readable.getReader();
+  var chunks=[],total=0;
+  while(true){var v=await r.read();if(v.done)break;chunks.push(v.value);total+=v.value.length;}
+  var out=new Uint8Array(total),off=0;
+  for(var c of chunks){out.set(c,off);off+=c.length;}
+  return out;
+}
+
+// ── Main ──────────────────────────────────────────────────────
+var gameStarted=false;
+
+async function startGame(){
+  document.getElementById('splash').classList.add('hidden');
+  document.getElementById('loading').classList.add('show');
+
+  try{
+    setLog('Decoding game files...');
+    setProg(10);
+
+    var vfs=[];
+
+    for(var i=0;i<GAME_FILES.length;i++){
+      var gf=GAME_FILES[i];
+      setLog('Loading '+gf.name+' ...');
+      setProg(10+Math.floor(35*(i+1)/GAME_FILES.length));
+
+      var raw=b64ToU8(gf.b64);
+      // Always provide the raw file
+      vfs.push({path:gf.name,data:raw});
+
+      // If PK3, also extract entries into vfs
+      if(/\\.(pk3|pk7|ipk3|ipk7)$/i.test(gf.name)){
+        try{
+          var entries=parseZip(raw);
+          for(var [fname,fdata] of Object.entries(entries)){
+            try{
+              var bytes;
+              if(fdata instanceof Uint8Array){
+                bytes=fdata;
+              }else if(fdata&&fdata.comp){
+                bytes=await decompress(fdata.comp);
+              }
+              if(bytes){
+                vfs.push({path:'pk3/'+gf.name+'/'+fname,data:bytes});
+              }
+            }catch(ex){}
+          }
+          setLog('Extracted '+Object.keys(entries).length+' entries from '+gf.name);
+        }catch(ex){
+          console.warn('PK3 parse:',ex.message);
+        }
+      }
+    }
+
+    setLog('Loading Doom WebAssembly engine...');
+    setProg(50);
+
+    await loadEngine(vfs);
+
+  }catch(err){
+    console.error(err);
+    showError(
+      'Failed to initialize: <code>'+err.message+'</code><br><br>'+
+      'Make sure you have a valid IWAD (doom.wad, doom2.wad, etc.).'
+    );
+  }
+}
+
+async function loadEngine(vfs){
+  var canvas=document.getElementById('canvas');
+  canvas.width=640;canvas.height=400;
+
+  window.Module={
+    canvas:canvas,
+    noInitialRun:true,
+    arguments:DOOM_ARGS,
+
+    preRun:[function(){
+      setLog('Mounting virtual filesystem...');
+      setProg(70);
+      for(var f of vfs){
+        var parts=f.path.split('/');
+        // ensure directory tree
+        var dir='';
+        for(var p=0;p<parts.length-1;p++){
+          dir+=(dir?'/':'')+parts[p];
+          try{Module.FS.mkdir(dir);}catch(e){}
+        }
+        try{
+          Module.FS.writeFile(f.path,f.data);
+        }catch(e){console.warn('VFS write:',f.path,e.message);}
+      }
+      setLog('VFS ready ('+(vfs.length)+' files). Starting engine...');
+      setProg(85);
+    }],
+
+    print:function(t){console.log('[doom]',t);},
+    printErr:function(t){console.warn('[doom]',t);},
+
+    setStatus:function(t){
+      if(!t&&!gameStarted){
+        gameStarted=true;
+        setProg(100);
+        setTimeout(revealCanvas,400);
+      }else if(t){
+        setLog(t);
+      }
+    },
+
+    onRuntimeInitialized:function(){
+      setLog('Engine ready!');setProg(95);
+    },
+
+    monitorRunDependencies:function(n){
+      if(n===0&&!gameStarted){setProg(98);}
+    }
+  };
+
+  // Load engine script
+  function tryLoad(url,fallback){
+    return new Promise(function(res,rej){
+      var s=document.createElement('script');
+      s.src=url;
+      s.onload=res;
+      s.onerror=function(){fallback?tryLoad(fallback).then(res,rej):rej(new Error('Engine load failed from '+url));};
+      document.head.appendChild(s);
+    });
+  }
+
+  // doom-wasm (Chocolate Doom WASM) — multiple CDN mirrors
+  var mirrors=[
+    'https://cdn.jsdelivr.net/gh/cloudwu/doom-wasm@master/doom.js',
+    'https://unpkg.com/doom-wasm@latest/doom.js'
+  ];
+
+  setLog('Fetching engine...');
+  var loaded=false;
+  for(var url of mirrors){
+    try{
+      await tryLoad(url);
+      loaded=true;
+      setLog('Engine loaded from CDN.');
+      break;
+    }catch(e){
+      console.warn('Mirror failed:',url);
+    }
+  }
+
+  if(!loaded){
+    showError(
+      'Could not load Doom engine from CDN.<br><br>'+
+      'This file requires an internet connection on first launch so the browser can cache the engine (~3 MB).<br>'+
+      'After first load, it works fully offline.<br><br>'+
+      'Alternatively, re-pack with <strong>Self-Contained mode</strong> enabled.'
+    );
+    return;
+  }
+
+  // Safety timeout — force-show canvas if setStatus('') never fires
+  setTimeout(function(){if(!gameStarted)revealCanvas();},8000);
+}
+
+function revealCanvas(){
+  gameStarted=true;
+  document.getElementById('ui').style.display='none';
+  var w=document.getElementById('cvwrap');
+  w.classList.add('show');
+  if(AUTO_FULLSCREEN){
+    var c=document.getElementById('canvas');
+    c.requestFullscreen&&c.requestFullscreen().catch(function(){});
+  }
+}
+
+// Fullscreen toggle
+document.addEventListener('keydown',function(e){
+  if((e.key==='f'||e.key==='F')&&gameStarted){
+    var c=document.getElementById('canvas');
+    document.fullscreenElement?document.exitFullscreen():c.requestFullscreen&&c.requestFullscreen();
+  }
+});
+
+${autostart
+  ? "window.addEventListener('load',function(){setTimeout(startGame,600);});"
+  : "document.getElementById('start-btn').addEventListener('click',startGame);"
+}
+
+// expose for debugging
+window._doom={vfs:null,args:DOOM_ARGS};
+
+})();
+<\/script>
+
+</body>
+</html>`;
+}
+
+// ═══════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════
+// nothing extra needed — all event-driven
+</script>
+</body>
+</html>
